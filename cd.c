@@ -4,10 +4,6 @@
 
 char* current_dir;
 
-int handle_error(char* source, int ret_code) {
-    printf("Error: %s . Error code: %d", source, ret_code);
-    return ret_code;
-}
 
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/chdir.html#tag_16_57_06_01
 int cd(const char* path) {
@@ -15,14 +11,9 @@ int cd(const char* path) {
 
     ret = chdir(path);
     if (ret)
-        return handle_error("No such path", ret);
+        perror(NULL);
 
     return ret;
-}
-
-
-int ls() {
-    return ls_path(current_dir);
 }
 
 // http://pubs.opengroup.org/onlinepubs/009695399/functions/opendir.html
@@ -34,14 +25,23 @@ int ls_path(const char* path) {
     struct dirent* dir_ent;
     
     dir = opendir(path);
-    
-    while ( (dir_ent = readdir(dir)) != NULL) {
-        printf("%s\n", dir_ent->d_name);
+
+    if (dir != NULL) {    
+        while ( (dir_ent = readdir(dir)) != NULL) {
+            printf("%s\n", dir_ent->d_name);
+        }
     }
-    
+    else {
+        perror(NULL);
+        ret = 1;
+    }
+
     return ret;
 }
 
+int ls() {
+    return ls_path(current_dir);
+}
 
 int main() {
     printf("hai\n");
@@ -51,9 +51,11 @@ int main() {
     ls();
     cd("/Users/");
     ls();
-    ls_path("/");
+    cd("/wioejfowiejf");
+    ls_path("/wefwefw");
 
     return 0;
+
 }
 
 
