@@ -13,3 +13,4 @@ char* current_dir;
 int cd(const char* path);
 char* ls();
 char* ls_path(const char* path);
+char* cwd();

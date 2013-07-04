@@ -47,3 +47,11 @@ char* ls() {
     const char* path = "./";
     return ls_path(path);
 }
+
+char* cwd() {
+    char* cwd[1024];
+    if (getcwd(cwd, sizeof(cwd)) != NULL) {
+        return getcwd(cwd, 1024);
+    }
+    else return "Error getting path\n";
+}
