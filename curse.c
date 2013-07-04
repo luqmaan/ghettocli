@@ -2,14 +2,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <ncurses.h>
+#include "dir.h"
 
-typedef struct hashed_inputs_struct {
-    int input;
-    int quit;
-    int ls;
-} hashed_inputs;
-
-hashed_inputs HASHES;
 
 // http://stackoverflow.com/questions/7666509/hash-function-for-string
 int hashify(char *str) {
@@ -20,57 +14,50 @@ int hashify(char *str) {
     return hash;
 }
 
-void ls() {
-
-    printw("LS LSLS LSLSLSLSLSLSSLSLSLSLS");
-
+void help()  {
+    printw("2 chainz.\n");
 }
-
 
 int parse_input(char *input) {
     int in = hashify(input);
 
-    if (in == HASHES.quit) {
+    if (in == hashify("quit") || in == hashify("exit")) {
         return 1;
     }
-    else if (in == HASHES.ls) {
-        ls();
+    else if (in == hashify("help")) {
+        help();
+    }
+    else if (in == hashify("ls")) {
+        char* lines = ls();
+        int i = 0;
+        // for (i = 0; i < sizeof(lines) / sizeof(char); i++) {
+        printw("%s", lines);
+        // }
     }
 
     return 0;
 }
 
 
-void fill_in_hash_struct() {
-    HASHES.input = hashify("input");
-    HASHES.quit = hashify("quit");
-    HASHES.ls = hashify("ls");
-}
-
-
 void main_loop()
 {
-    int ch;
     char str[80];
     int quit = 0;
     while (1) {
 
         attron(A_BOLD);
 
-        printw("gcli \\$/ > ");
+        printw("gcli \\$/ \\$/ > ");
         attroff(A_BOLD);
         refresh();
 
         getstr(str);
 
-        int hash = hashify(str);
-        mvprintw(LINES - 4, 0, "hash: %d", hash);
-
         quit = parse_input(str);
+
         if (quit)
             break;
 
-        mvprintw(LINES - 2, 0, "You Entered: %s", str);
         refresh();
     }
 }
@@ -80,7 +67,6 @@ int main()
     // gcc -lncurses -Wall -o curse.out curse.c && ./curse.out
     // http://www.tldp.org/HOWTO/NCURSES-Programming-HOWTO/helloworld.html
 
-    fill_in_hash_struct();
     initscr();
     raw();
     keypad(stdscr, TRUE);
