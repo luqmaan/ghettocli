@@ -3,13 +3,11 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 FILE* input;
 char* current_dir;
 char* current_cmd;
-
-pid_t children[1024];
-int num_children;
 
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/chdir.html#tag_16_57_06_01
 int cd(const char* path) {
@@ -69,9 +67,7 @@ int help() {
 
 int clr() {
 
-    // curses will require us to manually parse and handle input control sequences like backspace too :-(
-
-    printf("%c", 12); // ...or just do this
+    printf("%c", 12); 
 
     return 0;
 }
@@ -79,56 +75,74 @@ int clr() {
 int pause() {
 
     // kill(SIGSTOP);
+    // kill(SIGCONT); ?? XXX
 
-    // kill(SIGCONT);
+    printf("--pause--");
+    while(getc(stdin) != '\n') ; /* NOTHING */
 
     return 0;
 }
 
 void quit(int code) {
-	// XXX kill children
-
 	exit(code);
 }
 
 int exec(char *tmp) {
 	pid_t child;
 	char args[1024] = "", *ptr;
-	char cmd[1024];
-	int ret,i;
-
-	// loop children and wait to remove zombies
-	for (i=0; i < num_children; i++) {
-
-	}
-
-	if (num_children > sizeof(children)/sizeof(pid_t)) {
-		warnx("Too many children spawned; sorry. :-(\n");
-		return -1;
-	}
+	char cmd[1024], cmdname[1024], path[1024];
+	char *filesep = NULL, *paths = NULL;
+	int ret;
+	struct stat statbuf;
 
 	strncpy(cmd, tmp, 1024);
-
-	// XXX we need a way to wait or signal from child the execl status..
-	// or perror() will get printed after the prompt
-	// -- or just a way to order parent/child output?
+	strncpy(path, cmd, 1024);
 
 	child = fork();
 	if (child == 0) {
-		ptr = strstr(cmd, " ");
-		if (ptr != NULL) {
-			strncpy(args, ++ptr, 1024);
-			*(--ptr) = 0;
+		// Locate initial Path
+		ptr = path;
+		do {
+			if (*ptr == '/') filesep = ptr+1; 
+			ptr++;
+		} while (ptr != NULL && *ptr != 0);
+		if (filesep != NULL) *filesep = 0;
+		else filesep = path;
+
+		// Starting from cmdname, find args after space
+		ptr = &cmd[filesep-path];
+		do {
+			if (ptr != NULL && *ptr == ' ') {
+				*ptr = 0;
+				strncpy(args, ++ptr, 1024);
+				break;
+			}
+			ptr++;
+		} while (ptr != NULL && *ptr != 0);
+	
+		strncpy(cmdname, &cmd[filesep-path], 1024);
+
+		// if user provided no path, try to search
+		paths = getenv("PATH");
+		if (paths != NULL && strlen(path) == strlen(tmp)) {
+			// XXX now hashify(cmdname) 
+			ptr = strtok(paths, ":");
+			do {
+				snprintf(path, 1024, "%s/%s", ptr, cmdname);
+				if (stat(path, &statbuf) == 0) {
+					strncpy(cmd, path, 1024);
+					break;
+				}
+			} while ((ptr = strtok(NULL, ":")) != NULL);
 		}
 
-	// XXX "cmd" needs to be program name
-		ret = execl( cmd, "cmd", args, NULL );
+		ret = execl( cmd, cmdname, args, NULL );
 		if (ret < 0) perror(current_cmd);
 
 		exit(ret);
 	}
 	else if (child < 0) return -1;
-	else children[num_children++] = child;
+	else wait(NULL); 
   
   	return 0;
 }
@@ -176,7 +190,6 @@ int main(int argc, char *argv[]) {
     char buf[1024] = "";
     char *ptr, chr;
 
-    num_children = 0;
     current_dir = getcwd(NULL, 1024);
     input = stdin; // Until getopt tells us differently
 
@@ -213,23 +226,24 @@ int main(int argc, char *argv[]) {
 	if (buf[strlen(buf)-1] == '\n')
 		buf[strlen(buf)-1] = 0; // kill trailing \n
 
-	// XXX hmm should we implement a case-insensitive strcmp?
-	if (strcmp(buf, "quit") == 0) quit(0);
+	if (strlen(buf) <= 0) continue;
 
-	// pwd, cd, ls, dir
 	current_cmd = buf;
 
-	if (strcmp(buf, "pwd") == 0) pwd();
+	// XXX hmm should we implement a case-insensitive strcmp?
+	if (strcmp(buf, "quit") == 0) quit(0);
+	else if (strcmp(buf, "pwd") == 0) pwd();
 	else if (strcmp(buf, "ls") == 0) ls(current_dir);
 	else if (strcmp(buf, "dir") == 0) ls(current_dir);
 	else if (strcmp(buf, "cls") == 0) clr();
 	else if (strcmp(buf, "clear") == 0) clr();
+	else if (strcmp(buf, "pause") == 0) pause();
+	else if (strcmp(buf, "help") == 0) help();
 	else if ((ptr=test_cmd(buf, "cd")) != NULL) cd(ptr);
 	else if ((ptr=test_cmd(buf, "ls")) != NULL) ls(ptr);
 	else if ((ptr=test_cmd(buf, "dir")) != NULL) ls(ptr);
-	else if ((ptr=test_cmd(buf, "./")) != NULL ||
-		(ptr=test_cmd(buf, "/")) != NULL) exec(current_cmd);
-	else _echo(buf);
+	else if ((ptr=test_cmd(buf, "echo")) != NULL) _echo(ptr);
+	else exec(current_cmd);
 
     }
     while (1);
