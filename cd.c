@@ -11,16 +11,13 @@ char* current_cmd;
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/chdir.html#tag_16_57_06_01
 int cd(const char* path) {
     int ret = 0;
-    char prefix[1024];
-
-    snprintf(prefix, 1024, "cd %s", path);
 
     ret = chdir(path);
     if (!ret)
         current_dir = getcwd(NULL, 1024);
 
     if (ret)
-        perror(prefix);
+        perror(current_cmd);
    
     return ret;
 }
@@ -29,9 +26,6 @@ int cd(const char* path) {
 // http://pubs.opengroup.org/onlinepubs/009695399/basedefs/dirent.h.html
 int ls_path(const char* path) {
     int ret = 0;
-    char prefix[1024];
-
-    snprintf(prefix, 1024, "ls %s", path);
 
     DIR* dir;
     struct dirent* dir_ent;
@@ -40,11 +34,11 @@ int ls_path(const char* path) {
 
     if (dir != NULL) {    
         while ( (dir_ent = readdir(dir)) != NULL) {
-            printf("%s\n", dir_ent->d_name);
+	    printf("%s\n", dir_ent->d_name);
         }
     }
     else {
-        perror(prefix);
+        perror(current_cmd);
         ret = 1;
     }
 
@@ -56,11 +50,11 @@ int ls(char *path) {
 }
 
 int pwd() {
-    printf( "%s\n", current_dir );
+    printf("%s\n", current_dir );
     return 0;
 }
 
-int echo(const char *buf) {
+int _echo(const char *buf) {
     printf("%s\n", buf);
     return 0;
 }
@@ -72,10 +66,18 @@ int help() {
 
 int clr() {
 
+    // curses will require us to manually parse and handle input control sequences like backspace too :-(
+
+    printf("%c", 12); // ...or just do this
+
     return 0;
 }
 
 int pause() {
+
+    // kill(SIGSTOP);
+
+    // kill(SIGCONT);
 
     return 0;
 }
@@ -127,7 +129,7 @@ char *test_cmd(const char *buf, const char *cmd) {
 int main(int argc, char *argv[]) {
     const char format[1024] = "gcli\\%%uid/%%pwd> ";
     char buf[1024] = "";
-    char *ptr;
+    char *ptr, chr;
 
     // XXX track open children for pause() etc
     pid_t children[1024];
@@ -150,17 +152,22 @@ int main(int argc, char *argv[]) {
 		exit(EXIT_FAILURE);
 	}
     }
-    
+   
     printf("hai\n");
-
+ 
     do {
 	buf[0] = 0; // clear previous line
-	if (input == stdin) printf("%s", make_prompt(format));
+
+	if (input == stdin) {
+		printf("%s", make_prompt(format));
+	}
+
 	fgets(buf, 1024, input);
 
 	if (buf == NULL || strlen(buf) <= 0) break;
 
-	buf[strlen(buf)-1] = 0; // kill trailing \n
+	if (buf[strlen(buf)-1] == '\n')
+		buf[strlen(buf)-1] = 0; // kill trailing \n
 
 	// XXX hmm should we implement a case-insensitive strcmp?
 	if (strcmp(buf, "quit") == 0) quit(0);
@@ -171,10 +178,12 @@ int main(int argc, char *argv[]) {
 	if (strcmp(buf, "pwd") == 0) pwd();
 	else if (strcmp(buf, "ls") == 0) ls(current_dir);
 	else if (strcmp(buf, "dir") == 0) ls(current_dir);
+	else if (strcmp(buf, "cls") == 0) clr();
+	else if (strcmp(buf, "clear") == 0) clr();
 	else if ((ptr=test_cmd(buf, "cd")) != NULL) cd(ptr);
 	else if ((ptr=test_cmd(buf, "ls")) != NULL) ls(ptr);
 	else if ((ptr=test_cmd(buf, "dir")) != NULL) ls(ptr);
-	else echo(buf);
+	else _echo(buf);
 
     }
     while (1);
