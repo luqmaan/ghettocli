@@ -8,6 +8,9 @@ FILE* input;
 char* current_dir;
 char* current_cmd;
 
+pid_t children[1024];
+int num_children;
+
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/chdir.html#tag_16_57_06_01
 int cd(const char* path) {
     int ret = 0;
@@ -88,6 +91,48 @@ void quit(int code) {
 	exit(code);
 }
 
+int exec(char *tmp) {
+	pid_t child;
+	char args[1024] = "", *ptr;
+	char cmd[1024];
+	int ret,i;
+
+	// loop children and wait to remove zombies
+	for (i=0; i < num_children; i++) {
+
+	}
+
+	if (num_children > sizeof(children)/sizeof(pid_t)) {
+		warnx("Too many children spawned; sorry. :-(\n");
+		return -1;
+	}
+
+	strncpy(cmd, tmp, 1024);
+
+	// XXX we need a way to wait or signal from child the execl status..
+	// or perror() will get printed after the prompt
+	// -- or just a way to order parent/child output?
+
+	child = fork();
+	if (child == 0) {
+		ptr = strstr(cmd, " ");
+		if (ptr != NULL) {
+			strncpy(args, ++ptr, 1024);
+			*(--ptr) = 0;
+		}
+
+	// XXX "cmd" needs to be program name
+		ret = execl( cmd, "cmd", args, NULL );
+		if (ret < 0) perror(current_cmd);
+
+		exit(ret);
+	}
+	else if (child < 0) return -1;
+	else children[num_children++] = child;
+  
+  	return 0;
+}
+
 char *make_prompt(const char *format) {
     char prompt[1024] = "";
     char temp[1024] = "";
@@ -131,8 +176,7 @@ int main(int argc, char *argv[]) {
     char buf[1024] = "";
     char *ptr, chr;
 
-    // XXX track open children for pause() etc
-    pid_t children[1024];
+    num_children = 0;
     current_dir = getcwd(NULL, 1024);
     input = stdin; // Until getopt tells us differently
 
@@ -183,6 +227,8 @@ int main(int argc, char *argv[]) {
 	else if ((ptr=test_cmd(buf, "cd")) != NULL) cd(ptr);
 	else if ((ptr=test_cmd(buf, "ls")) != NULL) ls(ptr);
 	else if ((ptr=test_cmd(buf, "dir")) != NULL) ls(ptr);
+	else if ((ptr=test_cmd(buf, "./")) != NULL ||
+		(ptr=test_cmd(buf, "/")) != NULL) exec(current_cmd);
 	else _echo(buf);
 
     }
