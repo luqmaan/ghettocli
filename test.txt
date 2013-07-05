@@ -1,0 +1,8 @@
+pwd
+ls
+cd /Users/
+ls
+cd /wioejfowiejf
+ls /wefwefw
+cd test
+pwd
