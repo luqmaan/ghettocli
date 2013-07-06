@@ -3,15 +3,14 @@
 int main() {
     printf("hai\n");
 
-    char* l = ls();
-    printf("ls returned: %s\n", l);
+    printf("current dir is: %s\n", cwd());
+    printf("ls returned: %s\n", ls());
 
-    printf("%d\n", (int) strlen(l));
-
-    // cd("/Users/");
-    // ls();
-    // cd("/wioejfowiejf");
-    // ls_path("/wefwefw");
+    cd("/Users");
+    printf("current dir is: %s\n", cwd());
+    ls();
+    cd("/wioejfowiejf");
+    ls_path("/wefwefw");
 
     return 0;
 
