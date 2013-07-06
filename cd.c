@@ -46,8 +46,8 @@ int ls_path(const char* path) {
     return ret;
 }
 
-int ls(char *path) {
-    return ls_path(path);
+int ls() {
+    return ls_path("./");
 }
 
 int pwd() {

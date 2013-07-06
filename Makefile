@@ -6,10 +6,10 @@ LDFLAGS=
 CFLAGS=-c -Wall
 
 all: ${OBJECTS} 
-	${CC} -o gcli ${OBJECTS} ${LDFLAGS}
+	${CC} -o gcli.out ${OBJECTS} ${LDFLAGS}
 
 .o: 
 	${CC} ${CFLAGS} $< 
 
 clean:
-	${RM} -f *.o gcli
+	${RM} -f *.o gcli.out
