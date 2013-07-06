@@ -12,25 +12,24 @@ int hashify(char *str);
 int parse_input(char *input);
 void line_prefix();
 void main_loop();
+int cmd_match(const char *cmd,...);
 
 int main()
 {
-    // gcc -lncurses -Wall -o curse.out curse.c && ./curse.out
     // http://www.tldp.org/HOWTO/NCURSES-Programming-HOWTO/helloworld.html
 
     initscr();
     raw();
     keypad(stdscr, TRUE);
+
     start_color();
     use_default_colors();
-
     init_pair(1, COLOR_YELLOW, COLOR_BLACK);
     init_pair(2, COLOR_WHITE, COLOR_BLACK);
 
     main_loop();
 
     endwin();
-
     return 0;
 }
 
@@ -81,10 +80,8 @@ int cmd_match(const char *cmd,...) {
         arg = argv[argc++] = va_arg(param, char*);
         if (!arg)
             break;
-        if (strcmp(cmd, (char* )arg) == 0) {
-            // found a match
-            return 1;
-        }
+        if (strcmp(cmd, (char* )arg) == 0)
+            return 1; // found a match
     }
     va_end(param);
 
@@ -96,24 +93,24 @@ int cmd_match(const char *cmd,...) {
 
 int parse_input(char *input) {
 
-    if (cmd_match(input,"quit", "exit", NULL)) {
+    if (cmd_match(input, "quit", "exit", NULL)) {
         return 1; // return 1 to stop the main_loop
     }
-    else if (cmd_match(input,"help", NULL)) {
+    else if (cmd_match(input, "help", NULL)) {
         char* error = open_more_with("help.txt");
         if (! strcmp(error, ""))
             printw(error);
     }
-    else if (cmd_match(input,"clear", "clr", NULL)) {
+    else if (cmd_match(input, "clear", "clr", NULL)) {
         erase();
     }
-    else if (cmd_match(input,"ls", "dir", "cd", NULL)) {
+    else if (cmd_match(input, "ls", "dir", "cd", NULL)) {
         printw("%s\n", ls());
     }
-    else if (cmd_match(input,"cd", NULL)) {
+    else if (cmd_match(input, "cd", NULL)) {
         printw("cd");
     }
-    else if (cmd_match(input,"", NULL)) {
+    else if (cmd_match(input, "", NULL)) {
        // do nothing
     }
     else {
