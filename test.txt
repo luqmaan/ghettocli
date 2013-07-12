@@ -1,6 +1,8 @@
 pwd
 ls
 cd /Users/
+./delay.sh &
+pause
 ls
 cd /wioejfowiejf
 ls /wefwefw
