@@ -102,7 +102,8 @@ int help() {
 // Try to clear the screen...
 int clr() {
 
-    printf("%c", 12); 
+    write(1,"\E[H\E[2J",7); 
+ 
     // It looks like curses just moves the cursor to 0,0 and prints a lot of spaces? 
 
     // Maybe execute a terminal program like tset/reset?
