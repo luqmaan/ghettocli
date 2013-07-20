@@ -12,7 +12,9 @@ Usage
 To compile, simply run `make`. Then execute gcli (or myshell, if you insist).
 
 Usage: `./gcli [-v] [-f batchfile]`
+
 Interactive mode: `./gcli`
+
 Execute a batch file: `./gcli batchfile.sh`
 
 

@@ -14,8 +14,6 @@ Interactive mode: `./gcli`
 
 Execute a batch file: `./gcli batchfile.sh`
 
-Command history is maintained and can be found using the arrow up and down keys.
-
 
 Commands
 --
