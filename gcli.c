@@ -123,7 +123,7 @@ int pause() {
         if (children[i] > 0) kill(children[i], SIGSTOP);
     }
 
-    printf("--pause--");
+    printf("--pause--\nPress enter to continue.");
     while(getc(stdin) != '\n') ; /* NOTHING */
 
     for (i=0; i < max_children; i++) {
@@ -340,8 +340,8 @@ int main(int argc, char *argv[]) {
     }
     // Treat ONE extra argument as a batchfile, else Usage()
     if (argc == 2 && argv[1][0] != '-') {
-	input = fopen(argv[1], "r+");
-	if (input == NULL) err("fopen");
+    	input = fopen(argv[1], "r+");
+    	if (input == NULL) err("fopen");
     }
 
 
@@ -418,6 +418,7 @@ int main(int argc, char *argv[]) {
     	else if (strcasecmp(buf, "ls") == 0) ls(current_dir);
     	else if (strcasecmp(buf, "dir") == 0) ls(current_dir);
     	else if (strncasecmp(buf, "cls", 3) == 0) clr();
+        else if (strncasecmp(buf, "clr", 3) == 0) clr();
     	else if (strncasecmp(buf, "clear", 5) == 0) clr();
     	else if (strncasecmp(buf, "pause", 5) == 0) pause();
     	else if (strncasecmp(buf, "help", 4) == 0) help();
