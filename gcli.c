@@ -15,11 +15,14 @@
 #include <sys/wait.h>
 #include <signal.h>
 
+#include "stacktrace.h"
+
 
 // Some global variables for our command input, and the current directory/command
 FILE* input;
 char* current_dir;
 char* current_cmd;
+int state_paused = 0;
 
 // Track backgrounded processes
 pid_t children[5];
@@ -118,16 +121,30 @@ int show_children() {
 // are ready.
 int pause() {
     int i;
-
+    int num_paused = 0;
+    state_paused = 1;
     for (i=0; i < max_children; i++) {
-        if (children[i] > 0) kill(children[i], SIGSTOP);
+        if (children[i] > 0) {
+            kill(children[i], SIGSTOP);
+            num_paused++;
+        }   
     }
 
-    printf("--pause--\nPress enter to continue.");
-    while(getc(stdin) != '\n') ; /* NOTHING */
+    char input;
+    printf("--PAUSED %d PROCESSES--\nPress enter to continue.", num_paused);
+    while(1) {
+        input = getc(stdin);
+        if (input == '\n' || input == '^')
+            break;
+        // break if state_paused is changed, e.g. by quit()
+        if (state_paused == 0)
+            break;
+    }
+
+    state_paused = 0;
 
     for (i=0; i < max_children; i++) {
-	if (children[i] > 0) kill(children[i], SIGCONT);
+    	if (children[i] > 0) kill(children[i], SIGCONT);
     }
 
     return 0;
@@ -135,8 +152,8 @@ int pause() {
 
 // Quit the shell -- also try to gracefully shutdown if possible
 void quit(int code) {
+    printf("quitting\n");
 	int i;
-
     for (i=0; i < max_children; i++) 
        if (children[i] > 0) waitpid(children[i], NULL, 0);
 
@@ -296,6 +313,11 @@ void ctl_c_handler(int s) {
 }
 
 void ctl_d_handler(int s) {
+    if (state_paused) {
+        // NEVER RUNS
+        state_paused = 0;
+        sleep(1);
+    }
     quit(0);
     return;
 }
@@ -311,6 +333,8 @@ void trim(char * s) {
 
 // Main GHETTO entry point :-)
 int main(int argc, char *argv[]) {
+
+    activate_segmentation_handler();
 
     const char format[1024] = "\x1b[0;1mgcli\x1b[33m\\\x1b[32;1m%%uid\x1b[33;1m/\x1b[0;1m%%pwd\x1b[33;1m>\x1b[00m ";
 

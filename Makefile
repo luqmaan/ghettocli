@@ -1,6 +1,6 @@
 CC= gcc
 RM= rm
-SOURCES= gcli.c
+SOURCES= gcli.c stacktrace.c
 OBJECTS= $(SOURCES:.c=.o)
 LDFLAGS=
 CFLAGS=-c -Wall
