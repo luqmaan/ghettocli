@@ -89,7 +89,7 @@ int _echo(const char *buf) {
 // XXX Maybe ghetto-fy it with some ANSI color?!
 
 int help() {
-    printf("help\n");
+    printf("%s (%d.%d)\n", _GHETTO_NAME_, _GHETTO_VER_MAJOR_, _GHETTO_VER_MINOR_);
     exec("more help.txt");
     return 0;
 }
