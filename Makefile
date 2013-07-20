@@ -8,6 +8,7 @@ CFLAGS=-c -Wall
 all: ${OBJECTS} 
 	${CC} -o gcli.out ${OBJECTS} ${LDFLAGS}
 	cp gcli.out myshell
+	./gcli.out
 
 .o: 
 	${CC} ${CFLAGS} $< 

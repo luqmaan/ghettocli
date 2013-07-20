@@ -1,9 +1,11 @@
 pwd
 ls
-cd /Users/
+echo "Running sleep for 3 seconds in the background"
 ./delay.sh &
 pause
 ls
+echo "cding to /Users"
+cd /Users/
 cd /wioejfowiejf
 ls /wefwefw
 cd test

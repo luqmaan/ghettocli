@@ -86,18 +86,8 @@ int _echo(const char *buf) {
 // XXX Maybe ghetto-fy it with some ANSI color?!
 
 int help() {
-    printf("%s (%d.%d)\n", _GHETTO_NAME_, _GHETTO_VER_MAJOR_, _GHETTO_VER_MINOR_);
-    printf("Usage: gcli [-v] [-f batchfile]\n");
-    printf("Or: ghettocli batchfile\n");
-    printf("-v: Print version\n");
-    printf("batchfile: Read commands from file\n");
-    printf("\n\nNo arguments starts a shell and reads commands from stdin:\n");
-    printf("\n\nBuilt-in:\n");
-    printf("LS, PWD, CD, ECHO, PAUSE, CLEAR, HELP, QUIT\n");
-    printf("Accepts executable files by absolute path or will search through the PATH environment variable.\n");
-    printf("Default execution is foreground, but may be placed in the background by appending a '&'\n");
-    printf("Command history is maintained and can be found using the arrow up and down keys.\n");
-
+    printf("help\n");
+    exec("more help.txt");
     return 0;
 }
 
@@ -111,6 +101,16 @@ int clr() {
     // Maybe execute a terminal program like tset/reset?
 
     return 0;
+}
+
+int show_children() {
+    int i;
+    printf("Children: ");
+    for (i = 0; i < sizeof(children)/sizeof(children[0]); i++) {
+        printf("%d ", children[i]);
+    }
+    printf("\n");
+
 }
 
 // BUILTIN: Pause the shell until STDIN presses ENTER
@@ -137,8 +137,8 @@ int pause() {
 void quit(int code) {
 	int i;
 
-        for (i=0; i < max_children; i++) 
-	       if (children[i] > 0) waitpid(children[i], NULL, 0);
+    for (i=0; i < max_children; i++) 
+       if (children[i] > 0) waitpid(children[i], NULL, 0);
 
 	exit(code);
 }
@@ -172,7 +172,7 @@ int exec(char *tmp) {
 		}
 	}
 
-	if (cur_children > max_children) {
+	if (cur_children >= max_children) {
 		printf("Sorry, too many children were spawned.\n");
 		return;
 	}
@@ -291,13 +291,22 @@ char *test_cmd(const char *buf, const char *cmd) {
 
 
 void ctl_c_handler(int s) {
-    printf("Use ctl-d to quit\n");
+    printf("\nUse ctl-d to quit\n");
     return ;
 }
 
 void ctl_d_handler(int s) {
     quit(0);
     return;
+}
+
+// http://stackoverflow.com/questions/122616/how-do-i-trim-leading-trailing-whitespace-in-a-standard-way
+void trim(char * s) {
+    char * p = s;
+    int l = strlen(p);
+    while(isspace(p[l - 1])) p[--l] = 0;
+    while(* p && isspace(* p)) ++p, --l;
+    memmove(s, p, l + 1);
 }
 
 // Main GHETTO entry point :-)
@@ -354,68 +363,70 @@ int main(int argc, char *argv[]) {
 
     // main I/O loop 
     do {
-	buf[0] = 0; // clear previous line
+    	buf[0] = 0; // clear previous line
 
-	// If we have a user, make it pretty
-	if (input == stdin) {
-		printf("%s", make_prompt(format));
-	}
+    	// If we have a user, make it pretty
+    	if (input == stdin) {
+    		printf("%s", make_prompt(format));
+    	}
 
-	fgets(buf, 1024, input);
-	if (buf == NULL || strlen(buf) <= 0) break; // fgets() failed?
+    	fgets(buf, 1024, input);
+    	if (buf == NULL || strlen(buf) <= 0) break; // fgets() failed?
 
-	// XXX we would need to replace fgets to parse char by char...
-/*
-	// handle some control sequences
-	// UP arrow
-	if (strncmp(buf, "\x1b\x5b\x41", 3) == 0) {
-		printf("UP\n");
+    	// XXX we would need to replace fgets to parse char by char...
+    /*
+    	// handle some control sequences
+    	// UP arrow
+    	if (strncmp(buf, "\x1b\x5b\x41", 3) == 0) {
+    		printf("UP\n");
 
-		continue;
-	}
-	// DOWN arrow
-	else if (strncmp(buf, "\x1b\x5b\x42", 3) == 0) {
-		printf("DOWN\n");
-	
-		continue;
-	}
-	// escape and enter
-	else if (strncmp(buf, "\x1b\x0a", 2) == 0) {
-		continue;
-	}
-*/
+    		continue;
+    	}
+    	// DOWN arrow
+    	else if (strncmp(buf, "\x1b\x5b\x42", 3) == 0) {
+    		printf("DOWN\n");
+    	
+    		continue;
+    	}
+    	// escape and enter
+    	else if (strncmp(buf, "\x1b\x0a", 2) == 0) {
+    		continue;
+    	}
+    */
 
+        trim(buf);
 
-	// kill trailing \n
-	if (buf[strlen(buf)-1] == '\n')
-		buf[strlen(buf)-1] = 0; 
+    	// kill trailing \n
+    	if (buf[strlen(buf)-1] == '\n')
+    		buf[strlen(buf)-1] = 0; 
 
-	// We aint got no time for "Empty lines"
-	if (strlen(buf) <= 0) continue;
+    	// We aint got no time for "Empty lines"
+    	if (strlen(buf) <= 0) continue;
 
-	// Save this command in the global buffer in case we want to bitch out the user later :P
-	current_cmd = buf;
+    	// Save this command in the global buffer in case we want to bitch out the user later :P
+    	current_cmd = buf;
 
-	// And also save it in their history using a 2-dimensional char[] and the wonder of modulus
-	strncpy(history[(cur_history++) % max_history], buf, 1024);
-	ptr_history = cur_history; // Make sure we point to the latest cmd
+    	// And also save it in their history using a 2-dimensional char[] and the wonder of modulus
+    	strncpy(history[(cur_history++) % max_history], buf, 1024);
+    	ptr_history = cur_history; // Make sure we point to the latest cmd
 
-	// Now we check for valid commands:
-	// Either it matches completely (case-insensitive)
-	// OR test_cmd() matches the COMMAND and returns a pointer to the arguments
-	if (strncasecmp(buf, "quit", 4) == 0) quit(0);
-	else if (strncasecmp(buf, "pwd", 3) == 0) pwd();
-	else if (strcasecmp(buf, "ls") == 0) ls(current_dir);
-	else if (strcasecmp(buf, "dir") == 0) ls(current_dir);
-	else if (strncasecmp(buf, "cls", 3) == 0) clr();
-	else if (strncasecmp(buf, "clear", 5) == 0) clr();
-	else if (strncasecmp(buf, "pause", 5) == 0) pause();
-	else if (strncasecmp(buf, "help", 4) == 0) help();
-	else if ((ptr=test_cmd(buf, "cd")) != NULL) cd(ptr);
-	else if ((ptr=test_cmd(buf, "ls")) != NULL) ls_path(ptr);
-	else if ((ptr=test_cmd(buf, "dir")) != NULL) ls_path(ptr);
-	else if ((ptr=test_cmd(buf, "echo")) != NULL) _echo(ptr);
-	else exec(current_cmd); // Exec is the catch-all
+    	// Now we check for valid commands:
+    	// Either it matches completely (case-insensitive)
+    	// OR test_cmd() matches the COMMAND and returns a pointer to the arguments
+    	if (strncasecmp(buf, "quit", 4) == 0) quit(0);
+    	else if (strncasecmp(buf, "pwd", 3) == 0) pwd();
+    	else if (strcasecmp(buf, "ls") == 0) ls(current_dir);
+    	else if (strcasecmp(buf, "dir") == 0) ls(current_dir);
+    	else if (strncasecmp(buf, "cls", 3) == 0) clr();
+    	else if (strncasecmp(buf, "clear", 5) == 0) clr();
+    	else if (strncasecmp(buf, "pause", 5) == 0) pause();
+    	else if (strncasecmp(buf, "help", 4) == 0) help();
+        else if (strncasecmp(buf, "children", 8) == 0) show_children();
+    	else if ((ptr=test_cmd(buf, "cd")) != NULL) cd(ptr);
+    	else if ((ptr=test_cmd(buf, "ls")) != NULL) ls_path(ptr);
+    	else if ((ptr=test_cmd(buf, "dir")) != NULL) ls_path(ptr);
+    	else if ((ptr=test_cmd(buf, "echo")) != NULL) _echo(ptr);
+    	else exec(current_cmd); // Exec is the catch-all
 
     }
     while (1);
