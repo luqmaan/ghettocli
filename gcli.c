@@ -323,7 +323,10 @@ void ctl_d_handler(int s) {
 
     // Since we are leaving in a hurry, force stop children w/ SIGTERM
     for (i=0; i < max_children; i++) {
-	if (children[i] > 0) kill(children[i], SIGTERM);
+	if (children[i] > 0) {
+		if (state_paused) kill(children[i], SIGCONT); 
+		kill(children[i], SIGTERM);
+	}
     }
 
     quit(0);
