@@ -1,21 +1,4 @@
-/* ghettocli  */
-// Define the program name and version #.# as constants for use later
-#define _GHETTO_NAME_ "ghettoCLI"
-#define _GHETTO_VER_MAJOR_ 0
-#define _GHETTO_VER_MINOR_ 69 
-#define _MAX_CHILDREN 5
-
-#include <stdio.h>
-#include <unistd.h>
-#include <dirent.h>
-#include <string.h>
-#include <stdlib.h>
-#include <sys/stat.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <signal.h>
-
-#include "stacktrace.h"
+#include "gcli.h"
 
 // Some global variables for our command input, and the current directory/command
 FILE* input;
@@ -143,7 +126,7 @@ void quit(int code) {
     printf("\nQuitting\n");
     show_children();
     if (state_paused) {
-        state_paused = 0;s
+        state_paused = 0;
         exit(code);
     }
 	int i;
@@ -184,7 +167,7 @@ int exec(char *tmp) {
 
 	if (cur_children >= max_children) {
 		printf("Sorry, too many children were spawned.\n");
-		return;
+		return 0;
 	}
 
 	child = fork();
@@ -253,8 +236,7 @@ int exec(char *tmp) {
 // Given a formatted string, replace special variables with their values
 // %uid = $ if non-root, # if root
 // %pwd = current directory
-char *make_prompt(const char *format) {
-    char prompt[1024] = "";
+char *make_prompt(char *prompt, const char *format) {
     char temp[1024] = "";
     char *ptr;
 
@@ -275,7 +257,7 @@ char *make_prompt(const char *format) {
 
 // This is basically STRNCMP() except instead of returning the match,
 // we return a pointer to the REMAINDER of the string (arguments) or NULL
-char *test_cmd(const char *buf, const char *cmd) {
+char *test_cmd(char *buf, const char *cmd) {
 	int c1, c2, flag;
 
 	if (buf == NULL || cmd == NULL) return NULL;
@@ -336,7 +318,7 @@ int main(int argc, char *argv[]) {
     const char format[1024] = "\x1b[0;1mgcli\x1b[33m\\\x1b[32;1m%%uid\x1b[33;1m/\x1b[0;1m%%pwd\x1b[33;1m>\x1b[00m ";
 
     char buf[1024] = "";
-    char *ptr, chr;
+    char *ptr;
     char history[5][1024];
     int max_history = 5, cur_history = 0, ptr_history = 0;
 
@@ -357,7 +339,7 @@ int main(int argc, char *argv[]) {
     current_dir = getcwd(NULL, 1024);
     input = stdin; // Until getopt tells us differently
 
-    int flags, opt;
+    int opt;
     while ((opt = getopt(argc, argv, "vf:")) != -1) {
     	switch (opt) {
     	case 'v':
@@ -366,7 +348,7 @@ int main(int argc, char *argv[]) {
     		break;
     	case 'f':
     		input = fopen(optarg, "r+");
-    		if (input == NULL) err("fopen");
+    		if (input == NULL) perror("fopen");
     		break;
     	default:
     		fprintf(stderr, "Usage: %s [-v] [-f FILENAME]\n", argv[0]);
@@ -377,10 +359,11 @@ int main(int argc, char *argv[]) {
     // Treat ONE extra argument as a batchfile, else Usage()
     if (argc == 2 && argv[1][0] != '-') {
     	input = fopen(argv[1], "r+");
-    	if (input == NULL) err("fopen");
+    	if (input == NULL) perror("fopen");
     }
 
     printf("\x1b[31;1mWelcome to ghettocli. A ghetto command line interpreter.\x1b[0m\n");
+    char prompt[1024] = "";
 
     // main I/O loop 
     do {
@@ -388,7 +371,7 @@ int main(int argc, char *argv[]) {
 
     	// If we have a user, make it pretty
     	if (input == stdin) {
-    		printf("%s", make_prompt(format));
+    		printf("%s", make_prompt(prompt, format));
     	}
 
     	fgets(buf, 1024, input);
