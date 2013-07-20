@@ -33,8 +33,11 @@ int cur_children = 0;
 int cd(const char* path) {
     int ret = 0;
     ret = chdir(path);
+    // If success, change current_dir to where we really are
     if (!ret)
         current_dir = getcwd(NULL, 1024);
+    // If failed, print well-formed error with prefix as the actual 
+    // command for reference like a real shell does
     if (ret)
         perror(current_cmd);
     return ret;
@@ -60,24 +63,24 @@ int ls_path(const char* path) {
     return ret;
 }
 
-// BUILTIN list directory (current)
+// BUILTIN: list directory (current)
 int ls() {
     return ls_path("./");
 }
 
-// Simply print the current directory
+// BUILTIN: Simply print the current directory
 int pwd() {
     printf("%s\n", current_dir );
     return 0;
 }
 
-// Just echo back the argument
+// BUILTIN: Just echo back the argument
 int _echo(const char *buf) {
     printf("%s\n", buf);
     return 0;
 }
 
-// Print some basic instructions
+// BUILTIN: Print some basic instructions
 // XXX Maybe ghetto-fy it with some ANSI color?!
 
 int help() {
@@ -86,15 +89,18 @@ int help() {
     return 0;
 }
 
-// Try to clear the screen...
+// BUILTIN: Try to clear the screen...
 int clr() {
+    // use standard ANSI-style codes
     write(1,"\E[H\E[2J",7); 
     return 0;
 }
 
+
+// BUILTIN: Show the currently running child processes
 int show_children() {
     int i;
-    printf("Children: ");
+    printf("Children currently executing: ");
     for (i = 0; i < sizeof(children)/sizeof(children[0]); i++) {
         printf("%d ", children[i]);
     }
@@ -132,17 +138,17 @@ int pause() {
     return 0;
 }
 
-// Quit the shell -- also try to gracefully shutdown if possible
+// BUILTIN: Quit the shell, also try to gracefully shutdown.
 void quit(int code) {
-    printf("quitting\n");
+    printf("\nQuitting\n");
+    show_children();
     if (state_paused) {
-        state_paused = 0;
+        state_paused = 0;s
         exit(code);
     }
 	int i;
     for (i=0; i < max_children; i++) 
        if (children[i] > 0) waitpid(children[i], NULL, 0);
-
 	exit(code);
 }
 
@@ -311,7 +317,7 @@ void ctl_d_handler(int s) {
     quit(0);
 }
 
-// trims leading/trailing whitespace
+// trim leading/trailing whitespace
 // http://stackoverflow.com/questions/122616/how-do-i-trim-leading-trailing-whitespace-in-a-standard-way
 void trim(char * s) {
     char * p = s;
