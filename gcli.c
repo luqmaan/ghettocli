@@ -236,8 +236,10 @@ int exec(char *tmp) {
 
 		if (strlen(args) <= 0) 
 			ret = execl( cmd, cmdname, NULL );
-		else 
+		else { 
+			trim(args);
 			ret = execl( cmd, cmdname, args, NULL );
+		}
 
 		if (ret < 0) perror(current_cmd);
 		exit(ret);
@@ -313,11 +315,13 @@ void ctl_c_handler(int s) {
 }
 
 void ctl_d_handler(int s) {
-    if (state_paused) {
-        // NEVER RUNS
-        state_paused = 0;
-        sleep(1);
+    int i;
+
+    // Since we are leaving in a hurry, force stop children w/ SIGTERM
+    for (i=0; i < max_children; i++) {
+	if (children[i] > 0) kill(children[i], SIGTERM);
     }
+
     quit(0);
     return;
 }
