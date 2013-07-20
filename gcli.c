@@ -36,7 +36,7 @@ int ls_path(const char* path) {
     dir = opendir(path);
     if (dir != NULL) {    
         while ( (dir_ent = readdir(dir)) != NULL) {
-    	    printf("%s\n", dir_ent->d_name);
+            printf("%s\n", dir_ent->d_name);
         }
     }
     else {
@@ -116,7 +116,7 @@ int pause() {
     }
     state_paused = 0;
     for (i=0; i < max_children; i++) {
-    	if (children[i] > 0) kill(children[i], SIGCONT);
+        if (children[i] > 0) kill(children[i], SIGCONT);
     }
     return 0;
 }
@@ -129,108 +129,108 @@ void quit(int code) {
         state_paused = 0;
         exit(code);
     }
-	int i;
+    int i;
     for (i=0; i < max_children; i++) 
        if (children[i] > 0) waitpid(children[i], NULL, 0);
-	exit(code);
+    exit(code);
 }
 
 // Attempt to EXECUTE a program. Accepts executable files by 
 // absolute path or will search through the PATH environment 
 // variable. Default execution is foreground.
 int exec(char *tmp) {
-	pid_t child;
-	char args[1024] = "", *ptr;
-	char cmd[1024], cmdname[1024], path[1024];
-	char *filesep = NULL, *paths = NULL;
-	int ret, is_background = 0, i;
-	struct stat statbuf;
+    pid_t child;
+    char args[1024] = "", *ptr;
+    char cmd[1024], cmdname[1024], path[1024];
+    char *filesep = NULL, *paths = NULL;
+    int ret, is_background = 0, i;
+    struct stat statbuf;
 
-	strncpy(cmd, tmp, 1024);
-	strncpy(path, cmd, 1024);
+    strncpy(cmd, tmp, 1024);
+    strncpy(path, cmd, 1024);
 
-	// XXX determine if background or foreground
-	if (cmd[strlen(cmd)-1] == '&') {
-		is_background = 1;
-		cmd[strlen(cmd)-1] = 0;
-	}
+    // XXX determine if background or foreground
+    if (cmd[strlen(cmd)-1] == '&') {
+        is_background = 1;
+        cmd[strlen(cmd)-1] = 0;
+    }
 
-	// Before we exec, check for zombies! 
-	if (cur_children > 0) {
-		for (i=0; i < max_children; i++) {
-			if (waitpid(children[i], NULL, WNOHANG) > 0) {
-				cur_children--;
-				children[i] = 0;
-			}
-		}
-	}
+    // Before we exec, check for zombies! 
+    if (cur_children > 0) {
+        for (i=0; i < max_children; i++) {
+            if (waitpid(children[i], NULL, WNOHANG) > 0) {
+                cur_children--;
+                children[i] = 0;
+            }
+        }
+    }
 
-	if (cur_children >= max_children) {
-		printf("Sorry, too many children were spawned.\n");
-		return 0;
-	}
+    if (cur_children >= max_children) {
+        printf("Sorry, too many children were spawned.\n");
+        return 0;
+    }
 
-	child = fork();
+    child = fork();
 
-	if (child == 0) {
-		// Locate initial Path
-		ptr = path;
-		do {
-			if (*ptr == '/') filesep = ptr+1; 
-			ptr++;
-		} while (ptr != NULL && *ptr != 0);
-		if (filesep != NULL) *filesep = 0;
-		else filesep = path;
+    if (child == 0) {
+        // Locate initial Path
+        ptr = path;
+        do {
+            if (*ptr == '/') filesep = ptr+1; 
+            ptr++;
+        } while (ptr != NULL && *ptr != 0);
+        if (filesep != NULL) *filesep = 0;
+        else filesep = path;
 
-		// Starting from cmdname, find args after space
-		ptr = &cmd[filesep-path];
-		do {
-			if (ptr != NULL && *ptr == ' ') {
-				*ptr = 0;
-				strncpy(args, ++ptr, 1024);
-				break;
-			}
-			ptr++;
-		} while (ptr != NULL && *ptr != 0);
-	
-		strncpy(cmdname, &cmd[filesep-path], 1024);
+        // Starting from cmdname, find args after space
+        ptr = &cmd[filesep-path];
+        do {
+            if (ptr != NULL && *ptr == ' ') {
+                *ptr = 0;
+                strncpy(args, ++ptr, 1024);
+                break;
+            }
+            ptr++;
+        } while (ptr != NULL && *ptr != 0);
+    
+        strncpy(cmdname, &cmd[filesep-path], 1024);
 
-		// or use execlp() XXX
-		// if user provided no path, try to search
-		paths = getenv("PATH");
-		if (paths != NULL && strlen(path) == strlen(tmp)) {
-			ptr = strtok(paths, ":");
-			do {
-				snprintf(path, 1024, "%s/%s", ptr, cmdname);
-				if (stat(path, &statbuf) == 0) {
-					strncpy(cmd, path, 1024);
-					break;
-				}
-			} while ((ptr = strtok(NULL, ":")) != NULL);
-		}
+        // or use execlp() XXX
+        // if user provided no path, try to search
+        paths = getenv("PATH");
+        if (paths != NULL && strlen(path) == strlen(tmp)) {
+            ptr = strtok(paths, ":");
+            do {
+                snprintf(path, 1024, "%s/%s", ptr, cmdname);
+                if (stat(path, &statbuf) == 0) {
+                    strncpy(cmd, path, 1024);
+                    break;
+                }
+            } while ((ptr = strtok(NULL, ":")) != NULL);
+        }
 
-		if (strlen(args) <= 0) 
-			ret = execl( cmd, cmdname, NULL );
-		else { 
-			trim(args);
-			ret = execl( cmd, cmdname, args, NULL );
-		}
+        if (strlen(args) <= 0) 
+            ret = execl( cmd, cmdname, NULL );
+        else { 
+            trim(args);
+            ret = execl( cmd, cmdname, args, NULL );
+        }
 
-		if (ret < 0) perror(current_cmd);
-		exit(ret);
-	}
-	else if (child < 0) return -1; // Failed?
-	else if (is_background == 0) wait(NULL); 
- 	else if (is_background == 1) {
-		// Find empty slot in array to save child PID
-		for (i=0; i < max_children; i++) 
-			if (children[i] <= 0) break;
+        if (ret < 0) perror(current_cmd);
+        exit(ret);
+    }
+    else if (child < 0) return -1; // Failed?
+    else if (is_background == 0) wait(NULL); 
+     else if (is_background == 1) {
+        // Find empty slot in array to save child PID
+        for (i=0; i < max_children; i++) 
+            if (children[i] <= 0) break;
 
-		if (i < max_children) children[i] = child;
-		cur_children++;
- 	}
+        if (i < max_children) children[i] = child;
+        cur_children++;
+     }
 
-  	return 0;
+      return 0;
 }
 
 // Given a formatted string, replace special variables with their values
@@ -243,13 +243,13 @@ char *make_prompt(char *prompt, const char *format) {
     strncpy(prompt, format, 1024);
 
     if ((ptr=strstr(prompt, "%%uid")) != NULL) {
-    	strncpy(temp, ptr+5, 1024); 
-    	snprintf(ptr, 1024 - (prompt-ptr), "%s%s", (getuid() == 0) ? "#" : "$", temp);
+        strncpy(temp, ptr+5, 1024); 
+        snprintf(ptr, 1024 - (prompt-ptr), "%s%s", (getuid() == 0) ? "#" : "$", temp);
     }
 
     if ((ptr=strstr(prompt, "%%pwd")) != NULL) {
-    	strncpy(temp, ptr+5, 1024);
-    	snprintf(ptr, 1024 - (prompt-ptr), " %s%s", current_dir, temp);
+        strncpy(temp, ptr+5, 1024);
+        snprintf(ptr, 1024 - (prompt-ptr), " %s%s", current_dir, temp);
     }
 
     return prompt;
@@ -258,24 +258,24 @@ char *make_prompt(char *prompt, const char *format) {
 // This is basically STRNCMP() except instead of returning the match,
 // we return a pointer to the REMAINDER of the string (arguments) or NULL
 char *test_cmd(char *buf, const char *cmd) {
-	int c1, c2, flag;
+    int c1, c2, flag;
 
-	if (buf == NULL || cmd == NULL) return NULL;
+    if (buf == NULL || cmd == NULL) return NULL;
 
-	// Iterate through each string and check if characters match 
-	do {
-		c1 = *buf++;
-		c2 = *cmd++;
-		flag = (c1 == c2);
-		// Try to be case-insensitive
-		if (!flag) flag = (c1+32 == c2);
-		if (!flag) flag = (c1 == c2+32);
-	} while ( flag && c1 != 0 && c2 != 0);
+    // Iterate through each string and check if characters match 
+    do {
+        c1 = *buf++;
+        c2 = *cmd++;
+        flag = (c1 == c2);
+        // Try to be case-insensitive
+        if (!flag) flag = (c1+32 == c2);
+        if (!flag) flag = (c1 == c2+32);
+    } while ( flag && c1 != 0 && c2 != 0);
 
-	// if we reached the end of CMD, but not BUF, then we matched so return the arguments left in BUF
-	if (c2 == 0 && c1 != 0) return buf;
+    // if we reached the end of CMD, but not BUF, then we matched so return the arguments left in BUF
+    if (c2 == 0 && c1 != 0) return buf;
 
-	return NULL;
+    return NULL;
 }
 
 // Prevent ctl-c from terminating.
@@ -290,11 +290,11 @@ void ctl_d_handler(int s) {
     int i;
     // Since we are leaving in a hurry, force stop children w/ SIGTERM
     for (i=0; i < max_children; i++) {
-    	if (children[i] > 0) {
+        if (children[i] > 0) {
             // resume a paused child so that it can be terminated correctly
-    		if (state_paused)kill(children[i], SIGCONT); 
-    		kill(children[i], SIGTERM);
-    	}
+            if (state_paused)kill(children[i], SIGCONT); 
+            kill(children[i], SIGTERM);
+        }
     }
     quit(0);
 }
@@ -341,25 +341,25 @@ int main(int argc, char *argv[]) {
 
     int opt;
     while ((opt = getopt(argc, argv, "vf:")) != -1) {
-    	switch (opt) {
-    	case 'v':
-    		printf("%s: %d.%d\n", _GHETTO_NAME_, _GHETTO_VER_MAJOR_, _GHETTO_VER_MINOR_);
-    		exit(0);
-    		break;
-    	case 'f':
-    		input = fopen(optarg, "r+");
-    		if (input == NULL) perror("fopen");
-    		break;
-    	default:
-    		fprintf(stderr, "Usage: %s [-v] [-f FILENAME]\n", argv[0]);
-    		exit(EXIT_FAILURE);
-    	}
+        switch (opt) {
+        case 'v':
+            printf("%s: %d.%d\n", _GHETTO_NAME_, _GHETTO_VER_MAJOR_, _GHETTO_VER_MINOR_);
+            exit(0);
+            break;
+        case 'f':
+            input = fopen(optarg, "r+");
+            if (input == NULL) perror("fopen");
+            break;
+        default:
+            fprintf(stderr, "Usage: %s [-v] [-f FILENAME]\n", argv[0]);
+            exit(EXIT_FAILURE);
+        }
     }
 
     // Treat ONE extra argument as a batchfile, else Usage()
     if (argc == 2 && argv[1][0] != '-') {
-    	input = fopen(argv[1], "r+");
-    	if (input == NULL) perror("fopen");
+        input = fopen(argv[1], "r+");
+        if (input == NULL) perror("fopen");
     }
 
     printf("\x1b[31;1mWelcome to ghettocli. A ghetto command line interpreter.\x1b[0m\n");
@@ -367,52 +367,52 @@ int main(int argc, char *argv[]) {
 
     // main I/O loop 
     do {
-    	buf[0] = 0; // clear previous line
+        buf[0] = 0; // clear previous line
 
-    	// If we have a user, make it pretty
-    	if (input == stdin) {
-    		printf("%s", make_prompt(prompt, format));
-    	}
+        // If we have a user, make it pretty
+        if (input == stdin) {
+            printf("%s", make_prompt(prompt, format));
+        }
 
-    	fgets(buf, 1024, input);
-    	if (buf == NULL || strlen(buf) <= 0) {
+        fgets(buf, 1024, input);
+        if (buf == NULL || strlen(buf) <= 0) {
             ctl_d_handler(1); // fgets() failed?
             break;
         }
         trim(buf);
 
-    	// kill trailing \n
-    	if (buf[strlen(buf)-1] == '\n')
-    		buf[strlen(buf)-1] = 0; 
+        // kill trailing \n
+        if (buf[strlen(buf)-1] == '\n')
+            buf[strlen(buf)-1] = 0; 
 
-    	// We aint got no time for "Empty lines"
-    	if (strlen(buf) <= 0) continue;
+        // We aint got no time for "Empty lines"
+        if (strlen(buf) <= 0) continue;
 
-    	// Save this command in the global buffer in case we want to bitch out the user later :P
-    	current_cmd = buf;
+        // Save this command in the global buffer in case we want to bitch out the user later :P
+        current_cmd = buf;
 
-    	// And also save it in their history using a 2-dimensional char[] and the wonder of modulus
-    	strncpy(history[(cur_history++) % max_history], buf, 1024);
-    	ptr_history = cur_history; // Make sure we point to the latest cmd
+        // And also save it in their history using a 2-dimensional char[] and the wonder of modulus
+        strncpy(history[(cur_history++) % max_history], buf, 1024);
+        ptr_history = cur_history; // Make sure we point to the latest cmd
 
-    	// Now we check for valid commands:
-    	// Either it matches completely (case-insensitive)
-    	// OR test_cmd() matches the COMMAND and returns a pointer to the arguments
-    	if (strncasecmp(buf, "quit", 4) == 0) quit(0);
-    	else if (strncasecmp(buf, "pwd", 3) == 0) pwd();
-    	else if (strcasecmp(buf, "ls") == 0) ls(current_dir);
-    	else if (strcasecmp(buf, "dir") == 0) ls(current_dir);
-    	else if (strncasecmp(buf, "cls", 3) == 0) clr();
+        // Now we check for valid commands:
+        // Either it matches completely (case-insensitive)
+        // OR test_cmd() matches the COMMAND and returns a pointer to the arguments
+        if (strncasecmp(buf, "quit", 4) == 0) quit(0);
+        else if (strncasecmp(buf, "pwd", 3) == 0) pwd();
+        else if (strcasecmp(buf, "ls") == 0) ls(current_dir);
+        else if (strcasecmp(buf, "dir") == 0) ls(current_dir);
+        else if (strncasecmp(buf, "cls", 3) == 0) clr();
         else if (strncasecmp(buf, "clr", 3) == 0) clr();
-    	else if (strncasecmp(buf, "clear", 5) == 0) clr();
-    	else if (strncasecmp(buf, "pause", 5) == 0) pause();
-    	else if (strncasecmp(buf, "help", 4) == 0) help();
+        else if (strncasecmp(buf, "clear", 5) == 0) clr();
+        else if (strncasecmp(buf, "pause", 5) == 0) pause();
+        else if (strncasecmp(buf, "help", 4) == 0) help();
         else if (strncasecmp(buf, "children", 8) == 0) show_children();
-    	else if ((ptr=test_cmd(buf, "cd")) != NULL) cd(ptr);
-    	else if ((ptr=test_cmd(buf, "ls")) != NULL) ls_path(ptr);
-    	else if ((ptr=test_cmd(buf, "dir")) != NULL) ls_path(ptr);
-    	else if ((ptr=test_cmd(buf, "echo")) != NULL) _echo(ptr);
-    	else exec(current_cmd); // Exec is the catch-all
+        else if ((ptr=test_cmd(buf, "cd")) != NULL) cd(ptr);
+        else if ((ptr=test_cmd(buf, "ls")) != NULL) ls_path(ptr);
+        else if ((ptr=test_cmd(buf, "dir")) != NULL) ls_path(ptr);
+        else if ((ptr=test_cmd(buf, "echo")) != NULL) _echo(ptr);
+        else exec(current_cmd); // Exec is the catch-all
 
     }
     while (1);
