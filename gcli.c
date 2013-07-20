@@ -13,6 +13,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <signal.h>
+
 
 // Some global variables for our command input, and the current directory/command
 FILE* input;
@@ -176,6 +178,7 @@ int exec(char *tmp) {
 	}
 
 	child = fork();
+    printf("child pid: %d\n", child);
 
 	if (child == 0) {
 		// Locate initial Path
@@ -286,6 +289,17 @@ char *test_cmd(const char *buf, const char *cmd) {
 	return NULL;
 }
 
+
+void ctl_c_handler(int s) {
+    printf("Use ctl-d to quit\n");
+    return ;
+}
+
+void ctl_d_handler(int s) {
+    quit(0);
+    return;
+}
+
 // Main GHETTO entry point :-)
 int main(int argc, char *argv[]) {
 
@@ -323,6 +337,20 @@ int main(int argc, char *argv[]) {
 
 
     printf("\x1b[31;1mhai\x1b[0m\n");
+
+    // make ctl_d call quit so children terminate as well
+    struct sigaction ctl_d;
+    ctl_d.sa_handler = ctl_d_handler;
+    sigemptyset(&ctl_d.sa_mask);
+    ctl_d.sa_flags = 0;
+    sigaction(SIGQUIT, &ctl_d, NULL);
+
+    // make ctl_c do nothing
+    struct sigaction ctl_c;
+    ctl_c.sa_handler = ctl_c_handler;
+    sigemptyset(&ctl_c.sa_mask);
+    ctl_c.sa_flags = SA_RESTART;
+    sigaction(SIGINT, &ctl_c, NULL);
 
     // main I/O loop 
     do {
