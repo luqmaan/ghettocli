@@ -21,7 +21,6 @@ Built-in:
 
 Accepts executable files by absolute path or will search through the PATH environment variable.
 
-Default execution is foreground, but may be placed in the background by appending a '&amp;'
+Default execution is foreground, but may be placed in the background by appending a '&'
 
-Command history is maintained and can be found using the arrow up and down keys..
 
