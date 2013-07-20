@@ -265,7 +265,6 @@ int exec(char *tmp) {
 // Given a formatted string, replace special variables with their values
 // %uid = $ if non-root, # if root
 // %pwd = current directory
-
 char *make_prompt(const char *format) {
     char prompt[1024] = "";
     char temp[1024] = "";
@@ -274,15 +273,13 @@ char *make_prompt(const char *format) {
     strncpy(prompt, format, 1024);
 
     if ((ptr=strstr(prompt, "%%uid")) != NULL) {
-	strncpy(temp, ptr+5, 1024); 
-
-	snprintf(ptr, 1024 - (prompt-ptr), "%s%s", (getuid() == 0) ? "#" : "$", temp);
+    	strncpy(temp, ptr+5, 1024); 
+    	snprintf(ptr, 1024 - (prompt-ptr), "%s%s", (getuid() == 0) ? "#" : "$", temp);
     }
 
     if ((ptr=strstr(prompt, "%%pwd")) != NULL) {
-	strncpy(temp, ptr+5, 1024);
-	
-	snprintf(ptr, 1024 - (prompt-ptr), " %s%s", current_dir, temp);
+    	strncpy(temp, ptr+5, 1024);
+    	snprintf(ptr, 1024 - (prompt-ptr), " %s%s", current_dir, temp);
     }
 
     return prompt;
@@ -300,7 +297,6 @@ char *test_cmd(const char *buf, const char *cmd) {
 		c1 = *buf++;
 		c2 = *cmd++;
 		flag = (c1 == c2);
-
 		// Try to be case-insensitive
 		if (!flag) flag = (c1+32 == c2);
 		if (!flag) flag = (c1 == c2+32);
@@ -312,27 +308,27 @@ char *test_cmd(const char *buf, const char *cmd) {
 	return NULL;
 }
 
-
+// Prevent ctl-c from terminating.
+// Very confusing things happen when you run python and hit ctl-c;
+// python continues to run (and jumps to 100% cpu), while the shell exits.
 void ctl_c_handler(int s) {
     printf("\nUse ctl-d to quit\n");
-    return ;
 }
 
+// Force children to terminate as well
 void ctl_d_handler(int s) {
     int i;
-
     // Since we are leaving in a hurry, force stop children w/ SIGTERM
     for (i=0; i < max_children; i++) {
-	if (children[i] > 0) {
-		if (state_paused) kill(children[i], SIGCONT); 
-		kill(children[i], SIGTERM);
-	}
+    	if (children[i] > 0) {
+    		if (state_paused) kill(children[i], SIGCONT); 
+    		kill(children[i], SIGTERM);
+    	}
     }
-
     quit(0);
-    return;
 }
 
+// trims leading/trailing whitespace
 // http://stackoverflow.com/questions/122616/how-do-i-trim-leading-trailing-whitespace-in-a-standard-way
 void trim(char * s) {
     char * p = s;
@@ -345,6 +341,7 @@ void trim(char * s) {
 // Main GHETTO entry point :-)
 int main(int argc, char *argv[]) {
 
+    // to debug segmentation faults
     activate_segmentation_handler();
 
     const char format[1024] = "\x1b[0;1mgcli\x1b[33m\\\x1b[32;1m%%uid\x1b[33;1m/\x1b[0;1m%%pwd\x1b[33;1m>\x1b[00m ";
