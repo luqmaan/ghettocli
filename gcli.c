@@ -102,8 +102,8 @@ int show_children() {
     return 0;
 }
 
-// BUILTIN: Pause the shell until STDIN presses ENTER
-//  Also, SIGSTOP any backgrounded children and SIGCONT when we
+// BUILTIN: Pause the shell until STDIN presses ENTER.
+// Also, SIGSTOP any backgrounded children and SIGCONT when we
 // are ready.
 int pause() {
     int i;

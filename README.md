@@ -9,15 +9,11 @@ A ghetto command line interpreter.
 Usage
 --
 
-To compile, simply run `make`.
+To compile, simply run `make`. Then execute gcli (or myshell, if you insist).
 
 Usage: `./gcli [-v] [-f batchfile]`
-
 Interactive mode: `./gcli`
-
 Execute a batch file: `./gcli batchfile.sh`
-
-Command history is maintained and can be found using the arrow up and down keys.
 
 
 Commands
