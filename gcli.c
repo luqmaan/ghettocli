@@ -1,9 +1,9 @@
-/* ghettoCLI  */
-
+/* ghettocli  */
 // Define the program name and version #.# as constants for use later
 #define _GHETTO_NAME_ "ghettoCLI"
 #define _GHETTO_VER_MAJOR_ 0
 #define _GHETTO_VER_MINOR_ 69 
+#define _MAX_CHILDREN 5
 
 #include <stdio.h>
 #include <unistd.h>
@@ -17,7 +17,6 @@
 
 #include "stacktrace.h"
 
-
 // Some global variables for our command input, and the current directory/command
 FILE* input;
 char* current_dir;
@@ -25,22 +24,19 @@ char* current_cmd;
 int state_paused = 0;
 
 // Track backgrounded processes
-pid_t children[5];
-int max_children = 5;
+pid_t children[_MAX_CHILDREN];
+int max_children = _MAX_CHILDREN;
 int cur_children = 0;
 
 // BUILTIN: try to change dir to argument
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/chdir.html#tag_16_57_06_01
 int cd(const char* path) {
     int ret = 0;
-
     ret = chdir(path);
     if (!ret)
         current_dir = getcwd(NULL, 1024);
-
     if (ret)
         perror(current_cmd);
-   
     return ret;
 }
 
@@ -49,22 +45,18 @@ int cd(const char* path) {
 // http://pubs.opengroup.org/onlinepubs/009695399/basedefs/dirent.h.html
 int ls_path(const char* path) {
     int ret = 0;
-
     DIR* dir;
     struct dirent* dir_ent;
-    
     dir = opendir(path);
-
     if (dir != NULL) {    
         while ( (dir_ent = readdir(dir)) != NULL) {
-	    printf("%s\n", dir_ent->d_name);
+    	    printf("%s\n", dir_ent->d_name);
         }
     }
     else {
         perror(current_cmd);
         ret = 1;
     }
-
     return ret;
 }
 
@@ -96,13 +88,7 @@ int help() {
 
 // Try to clear the screen...
 int clr() {
-
     write(1,"\E[H\E[2J",7); 
- 
-    // It looks like curses just moves the cursor to 0,0 and prints a lot of spaces? 
-
-    // Maybe execute a terminal program like tset/reset?
-
     return 0;
 }
 
@@ -113,7 +99,7 @@ int show_children() {
         printf("%d ", children[i]);
     }
     printf("\n");
-
+    return 0;
 }
 
 // BUILTIN: Pause the shell until STDIN presses ENTER
@@ -129,7 +115,6 @@ int pause() {
             num_paused++;
         }   
     }
-
     char input;
     printf("--PAUSED %d PROCESSES--\nPress enter to continue.", num_paused);
     while(1) {
@@ -140,13 +125,10 @@ int pause() {
         if (state_paused == 0)
             break;
     }
-
     state_paused = 0;
-
     for (i=0; i < max_children; i++) {
     	if (children[i] > 0) kill(children[i], SIGCONT);
     }
-
     return 0;
 }
 
@@ -164,8 +146,9 @@ void quit(int code) {
 	exit(code);
 }
 
-// Attempt to EXECUTE a program:
-
+// Attempt to EXECUTE a program. Accepts executable files by 
+// absolute path or will search through the PATH environment 
+// variable. Default execution is foreground.
 int exec(char *tmp) {
 	pid_t child;
 	char args[1024] = "", *ptr;
@@ -199,7 +182,6 @@ int exec(char *tmp) {
 	}
 
 	child = fork();
-    printf("child pid: %d\n", child);
 
 	if (child == 0) {
 		// Locate initial Path
@@ -315,13 +297,14 @@ void ctl_c_handler(int s) {
     printf("\nUse ctl-d to quit\n");
 }
 
-// Force children to terminate as well
+// Force children to terminate as well during SIGQUIT
 void ctl_d_handler(int s) {
     int i;
     // Since we are leaving in a hurry, force stop children w/ SIGTERM
     for (i=0; i < max_children; i++) {
     	if (children[i] > 0) {
-    		if (state_paused) kill(children[i], SIGCONT); 
+            // resume a paused child so that it can be terminated correctly
+    		if (state_paused)kill(children[i], SIGCONT); 
     		kill(children[i], SIGTERM);
     	}
     }
@@ -351,47 +334,47 @@ int main(int argc, char *argv[]) {
     char history[5][1024];
     int max_history = 5, cur_history = 0, ptr_history = 0;
 
+    // make ctl_d call quit so children terminate as well
+    struct sigaction ctl_d;
+    ctl_d.sa_handler = ctl_d_handler;
+    sigemptyset(&ctl_d.sa_mask);
+    ctl_d.sa_flags = 0;
+    sigaction(SIGQUIT, &ctl_d, NULL);
+
+    // make ctl_c do nothing    
+    struct sigaction ctl_c;
+    ctl_c.sa_handler = ctl_c_handler;
+    sigemptyset(&ctl_c.sa_mask);
+    ctl_c.sa_flags = SA_RESTART;
+    sigaction(SIGINT, &ctl_c, NULL);
+
     current_dir = getcwd(NULL, 1024);
     input = stdin; // Until getopt tells us differently
 
     int flags, opt;
     while ((opt = getopt(argc, argv, "vf:")) != -1) {
-	switch (opt) {
-	case 'v':
-		printf("%s: %d.%d\n", _GHETTO_NAME_, _GHETTO_VER_MAJOR_, _GHETTO_VER_MINOR_);
-		exit(0);
-		break;
-	case 'f':
-		input = fopen(optarg, "r+");
-		if (input == NULL) err("fopen");
-		break;
-	default:
-		fprintf(stderr, "Usage: %s [-v] [-f FILENAME]\n", argv[0]);
-		exit(EXIT_FAILURE);
-	}
+    	switch (opt) {
+    	case 'v':
+    		printf("%s: %d.%d\n", _GHETTO_NAME_, _GHETTO_VER_MAJOR_, _GHETTO_VER_MINOR_);
+    		exit(0);
+    		break;
+    	case 'f':
+    		input = fopen(optarg, "r+");
+    		if (input == NULL) err("fopen");
+    		break;
+    	default:
+    		fprintf(stderr, "Usage: %s [-v] [-f FILENAME]\n", argv[0]);
+    		exit(EXIT_FAILURE);
+    	}
     }
+
     // Treat ONE extra argument as a batchfile, else Usage()
     if (argc == 2 && argv[1][0] != '-') {
     	input = fopen(argv[1], "r+");
     	if (input == NULL) err("fopen");
     }
 
-
-    printf("\x1b[31;1mhai\x1b[0m\n");
-
-    // make ctl_d call quit so children terminate as well
-    // struct sigaction ctl_d;
-    // ctl_d.sa_handler = ctl_d_handler;
-    // sigemptyset(&ctl_d.sa_mask);
-    // ctl_d.sa_flags = 0;
-    // sigaction(SIGQUIT, &ctl_d, NULL);
-
-    // make ctl_c do nothing
-    struct sigaction ctl_c;
-    ctl_c.sa_handler = ctl_c_handler;
-    sigemptyset(&ctl_c.sa_mask);
-    ctl_c.sa_flags = SA_RESTART;
-    sigaction(SIGINT, &ctl_c, NULL);
+    printf("\x1b[31;1mWelcome to ghettocli. A ghetto command line interpreter.\x1b[0m\n");
 
     // main I/O loop 
     do {
@@ -403,7 +386,10 @@ int main(int argc, char *argv[]) {
     	}
 
     	fgets(buf, 1024, input);
-    	if (buf == NULL || strlen(buf) <= 0) break; // fgets() failed?
+    	if (buf == NULL || strlen(buf) <= 0) {
+            ctl_d_handler(1); // fgets() failed?
+            break;
+        }
         trim(buf);
 
     	// kill trailing \n
@@ -443,11 +429,7 @@ int main(int argc, char *argv[]) {
     while (1);
 
     fclose(input);
-
     quit(0);
-
     return 0;
 
 }
-
-
