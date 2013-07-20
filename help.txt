@@ -30,7 +30,8 @@ Provided commands:
 
     Spawn a child process: `sleep 300 &`
     Spawn another child process: `sleep 150 &`
-    Display the children: `children` Children: 13839 13840 0 0 0     
+    Display the children: `children` Children: 13839 13840 0 0 0
+
 - `pause` - pause the shell in addition to any child processes
 - `clear/clr` - clear the display
 - `help` - displays this file

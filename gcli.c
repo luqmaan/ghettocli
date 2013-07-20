@@ -282,7 +282,7 @@ char *test_cmd(char *buf, const char *cmd) {
 // Very confusing things happen when you run python and hit ctl-c;
 // python continues to run (and jumps to 100% cpu), while the shell exits.
 void ctl_c_handler(int s) {
-    printf("\nUse ctl-d to quit\n");
+    printf("\nUse ctl-d to quit. Press enter to continue.\n");
 }
 
 // Force children to terminate as well during SIGQUIT
@@ -374,9 +374,10 @@ int main(int argc, char *argv[]) {
             printf("%s", make_prompt(prompt, format));
         }
 
+        // fgets() failed, usually because of SIGQUIT
         fgets(buf, 1024, input);
         if (buf == NULL || strlen(buf) <= 0) {
-            ctl_d_handler(1); // fgets() failed?
+            ctl_d_handler(1);
             break;
         }
         trim(buf);
