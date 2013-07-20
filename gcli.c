@@ -153,6 +153,10 @@ int pause() {
 // Quit the shell -- also try to gracefully shutdown if possible
 void quit(int code) {
     printf("quitting\n");
+    if (state_paused) {
+        state_paused = 0;
+        exit(code);
+    }
 	int i;
     for (i=0; i < max_children; i++) 
        if (children[i] > 0) waitpid(children[i], NULL, 0);
@@ -376,11 +380,11 @@ int main(int argc, char *argv[]) {
     printf("\x1b[31;1mhai\x1b[0m\n");
 
     // make ctl_d call quit so children terminate as well
-    struct sigaction ctl_d;
-    ctl_d.sa_handler = ctl_d_handler;
-    sigemptyset(&ctl_d.sa_mask);
-    ctl_d.sa_flags = 0;
-    sigaction(SIGQUIT, &ctl_d, NULL);
+    // struct sigaction ctl_d;
+    // ctl_d.sa_handler = ctl_d_handler;
+    // sigemptyset(&ctl_d.sa_mask);
+    // ctl_d.sa_flags = 0;
+    // sigaction(SIGQUIT, &ctl_d, NULL);
 
     // make ctl_c do nothing
     struct sigaction ctl_c;
@@ -400,28 +404,6 @@ int main(int argc, char *argv[]) {
 
     	fgets(buf, 1024, input);
     	if (buf == NULL || strlen(buf) <= 0) break; // fgets() failed?
-
-    	// XXX we would need to replace fgets to parse char by char...
-    /*
-    	// handle some control sequences
-    	// UP arrow
-    	if (strncmp(buf, "\x1b\x5b\x41", 3) == 0) {
-    		printf("UP\n");
-
-    		continue;
-    	}
-    	// DOWN arrow
-    	else if (strncmp(buf, "\x1b\x5b\x42", 3) == 0) {
-    		printf("DOWN\n");
-    	
-    		continue;
-    	}
-    	// escape and enter
-    	else if (strncmp(buf, "\x1b\x0a", 2) == 0) {
-    		continue;
-    	}
-    */
-
         trim(buf);
 
     	// kill trailing \n

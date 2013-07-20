@@ -5,23 +5,52 @@ ghettocli
 
 A ghetto command line interpreter.
 
+
 Usage
-=====
+--
 
-./gcli [-v] [-f batchfile]
-Or: ./gcli batchfile
+To compile, simply run `make`.
 
--v: Print version
-batchfile: Read commands from file
+Usage: `./gcli [-v] [-f batchfile]`
 
-No arguments starts a shell and reads commands from stdin:
+Interactive mode: `./gcli`
 
-Built-in:
-	LS, PWD, CD, ECHO, PAUSE, CLEAR, HELP, QUIT
+Execute a batch file: `./gcli batchfile.sh`
 
-Accepts executable files by absolute path or will search through the PATH environment variable.
+Command history is maintained and can be found using the arrow up and down keys.
 
-Default execution is foreground, but may be placed in the background by appending a '&amp;'
 
-Command history is maintained and can be found using the arrow up and down keys..
+Commands
+--
 
+The following commands can be used in both batch and interactive modes.
+
+Provided commands:
+
+- `ls/dir [arg]` - print files in the current directory. If arg is provided, prints the files there.
+- `pwd` - print the path of the current directory.
+- `cd [arg]` - change the current directory.
+- `echo [arg]` - output the current text
+- `children` - output the number of child processes being executed by the shell
+
+    Spawn a child process: `sleep 300 &`
+    Spawn another child process: `sleep 150 &`
+    Display the children: `children` Children: 13839 13840 0 0 0     
+- `pause` - pause the shell in addition to any child processes
+- `clear/clr` - clear the display
+- `help` - displays this file
+- `quit` - exits the shell and kills all child processes.
+
+Unmatched commands:
+
+- `[cmd]` - Accepts executable files by absolute path or will search through the PATH environment variable. Default execution is foreground.
+- `[cmd] &` - execute a command in the background.
+
+
+Termination
+--
+
+To terminate the shell and child processes.
+
+- Input `quit`.
+- Use `Ctl-D` to send the process SIGQUIT. Do not use `Ctl-C`. We chose to ignore `Ctl=C` in order to prevent improper termination when launching anoter shell within ghettocli, e.g. python.

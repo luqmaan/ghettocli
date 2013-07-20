@@ -6,9 +6,9 @@ LDFLAGS=
 CFLAGS=-c -Wall
 
 all: ${OBJECTS} 
-	${CC} -o gcli.out ${OBJECTS} ${LDFLAGS}
-	cp gcli.out myshell
-	./gcli.out
+	${CC} -o gcli ${OBJECTS} ${LDFLAGS}
+	cp gcli myshell
+	./gcli
 
 .o: 
 	${CC} ${CFLAGS} $< 
