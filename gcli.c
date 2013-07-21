@@ -4,6 +4,8 @@
 FILE* input;
 char* current_dir;
 char* current_cmd;
+char working_dir[1024];
+
 int state_paused = 0;
 
 // Track backgrounded processes
@@ -73,8 +75,10 @@ int _echo(const char *buf) {
 // XXX Maybe ghetto-fy it with some ANSI color?!
 
 int help() {
+    char buf[1024] = "";
     printf("%s (%d.%d)\n", _GHETTO_NAME_, _GHETTO_VER_MAJOR_, _GHETTO_VER_MINOR_);
-    exec("more help.txt");
+    snprintf(buf, 1024, "more %s/help.txt", working_dir);
+    exec(buf);
     return 0;
 }
 
@@ -178,6 +182,7 @@ int exec(char *tmp) {
         // Locate initial Path
         ptr = path;
         do {
+	    if (*ptr == ' ' && filesep == NULL) break; // space but no / means any path is for an argument!
             if (*ptr == '/') filesep = ptr+1; 
             ptr++;
         } while (ptr != NULL && *ptr != 0);
@@ -339,6 +344,7 @@ int main(int argc, char *argv[]) {
     sigaction(SIGINT, &ctl_c, NULL);
 
     current_dir = getcwd(NULL, 1024);
+    strncpy( working_dir, current_dir, 1024 );
     input = stdin; // Until getopt tells us differently
 
     int opt;
@@ -382,7 +388,7 @@ int main(int argc, char *argv[]) {
         // fgets() failed, usually because of SIGQUIT
         fgets(buf, 1024, input);
         if (buf == NULL || strlen(buf) <= 0) {
-            ctl_d_handler(1);
+            if (input == stdin) ctl_d_handler(1);
             break;
         }
         trim(buf);
