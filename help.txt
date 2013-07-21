@@ -49,4 +49,4 @@ Termination
 To terminate the shell and child processes.
 
 - Input `quit`.
-- Use `Ctl-D` to send the process SIGQUIT. Do not use `Ctl-C`. We chose to ignore `Ctl=C` in order to prevent improper termination when launching anoter shell within ghettocli, e.g. python.
+- Use `Ctl-D` to send the process SIGQUIT. Do not use `Ctl-C`. We chose to ignore `Ctl-C` in order to prevent improper termination when launching another shell within ghettocli, e.g. python.

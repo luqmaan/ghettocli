@@ -15,6 +15,12 @@ int cur_children = 0;
 // http://pubs.opengroup.org/onlinepubs/9699919799/functions/chdir.html#tag_16_57_06_01
 int cd(const char* path) {
     int ret = 0;
+
+   if (strlen(path) <= 0) {
+        _echo(current_dir); // Per instructions
+        return 0;
+   }
+
     ret = chdir(path);
     // If success, change current_dir to where we really are
     if (!ret)
@@ -125,10 +131,6 @@ int pause() {
 void quit(int code) {
     printf("\nQuitting\n");
     show_children();
-    if (state_paused) {
-        state_paused = 0;
-        exit(code);
-    }
     int i;
     for (i=0; i < max_children; i++) 
        if (children[i] > 0) waitpid(children[i], NULL, 0);
@@ -149,7 +151,7 @@ int exec(char *tmp) {
     strncpy(cmd, tmp, 1024);
     strncpy(path, cmd, 1024);
 
-    // XXX determine if background or foreground
+    // determine if background or foreground
     if (cmd[strlen(cmd)-1] == '&') {
         is_background = 1;
         cmd[strlen(cmd)-1] = 0;
@@ -359,7 +361,10 @@ int main(int argc, char *argv[]) {
     // Treat ONE extra argument as a batchfile, else Usage()
     if (argc == 2 && argv[1][0] != '-') {
         input = fopen(argv[1], "r+");
-        if (input == NULL) perror("fopen");
+        if (input == NULL) {
+		perror("fopen");
+		exit(EXIT_FAILURE); // or set input back to stdin
+	}
     }
 
     printf("\x1b[31;1mWelcome to ghettocli. A ghetto command line interpreter.\x1b[0m\n");
@@ -403,6 +408,7 @@ int main(int argc, char *argv[]) {
         else if (strncasecmp(buf, "pwd", 3) == 0) pwd();
         else if (strcasecmp(buf, "ls") == 0) ls(current_dir);
         else if (strcasecmp(buf, "dir") == 0) ls(current_dir);
+	else if (strcasecmp(buf, "cd") == 0) cd("");
         else if (strncasecmp(buf, "cls", 3) == 0) clr();
         else if (strncasecmp(buf, "clr", 3) == 0) clr();
         else if (strncasecmp(buf, "clear", 5) == 0) clr();
